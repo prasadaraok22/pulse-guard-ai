@@ -282,4 +282,21 @@ service. Run with `uvicorn app.main:app --port 8100` (or any free port).
 
 **Elapsed Time at end of Turn 8:** ~T+5:25
 
+---
+
+## Turn 9 — LICENSE & Repo Description
+
+**Architect Prompt:**
+> Add a LICENSE (public repos benefit) and a one-line repo description
+
+**AI Engineer Action:**
+- Added **`LICENSE`** (MIT, 2026).
+- Added a **one-line repo description** as a bold tagline at the top of the
+  README, plus **MIT / Python** badges and a **License** section linking the file.
+- Suggested GitHub "About" one-liner:
+  *"AI-powered SRE watchdog that parses logs, detects error spikes, and fires
+  real-time webhook alerts with live health dashboards."*
+
+**Elapsed Time at end of Turn 9:** ~T+5:30
+
 

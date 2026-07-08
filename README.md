@@ -1,6 +1,10 @@
 # Pulse Guard AI
 
+> **AI-powered SRE watchdog that parses logs, detects error spikes, and fires real-time webhook alerts with live health dashboards.**
+
 ![CI](https://github.com/OWNER/pulse-guard-ai/actions/workflows/ci.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Python](https://img.shields.io/badge/python-3.11-blue.svg)
 
 An AI-powered **Intelligent Observability & Event Watchdog** for modern cloud
 applications. Pulse Guard ingests application/platform logs, detects error
@@ -298,3 +302,8 @@ PULSE_DATABASE_URL=postgresql+psycopg2://user:pass@host:5432/dbname uvicorn app.
   `npx @marp-team/marp-cli docs/presentation.md --pdf -o docs/PulseGuardAI.pdf`
 - `.env.example` — sample environment configuration (copy to `.env`).
 - `info.md` — challenge brief.
+
+## 📜 License
+
+Released under the [MIT License](LICENSE) — free to use, modify, and distribute.
+
