@@ -1,0 +1,13 @@
+2024-05-01T12:00:00Z INFO [payment-svc] request handled ok
+2024-05-01T12:00:05Z INFO [payment-svc] request handled ok
+2024-05-01T12:00:10Z WARN [payment-svc] slow downstream response 1200ms
+2024-05-01T12:01:00Z ERROR [payment-svc] downstream timeout / 500
+2024-05-01T12:01:01Z ERROR [payment-svc] downstream timeout / 500
+2024-05-01T12:01:02Z ERROR [payment-svc] downstream timeout / 500
+2024-05-01T12:01:03Z ERROR [payment-svc] downstream timeout / 500
+2024-05-01T12:01:04Z ERROR [payment-svc] downstream timeout / 500
+2024-05-01T12:01:05Z ERROR [payment-svc] downstream timeout / 500
+2024-05-01T12:01:06Z ERROR [payment-svc] connection refused
+{"timestamp": "2024-05-01T12:02:00Z", "level": "INFO", "service": "auth-svc", "message": "login ok"}
+{"timestamp": "2024-05-01T12:02:01Z", "level": "ERROR", "service": "auth-svc", "message": "token validation failed"}
+

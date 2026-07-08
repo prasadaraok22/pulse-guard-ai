@@ -1,0 +1,17 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.github/
+.idea/
+tests/
+docs/
+samples/
+ingest_watch/*.log
+*.db
+*.db-journal
+pulse_guard.db
+.DS_Store
+

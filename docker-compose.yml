@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pulse
+      POSTGRES_PASSWORD: pulse
+      POSTGRES_DB: pulseguard
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulse -d pulseguard"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Postgres via SQLAlchemy (psycopg2)
+      PULSE_DATABASE_URL: postgresql+psycopg2://pulse:pulse@db:5432/pulseguard
+      # Continuous watchdog polling (mount a host dir to feed logs)
+      PULSE_POLL_ENABLED: "true"
+      PULSE_POLL_DIRECTORY: /app/ingest_watch
+      PULSE_POLL_INTERVAL_SECONDS: "15"
+      # Optional: real alerting — uncomment & set your webhook
+      # PULSE_WEBHOOK_URL: https://hooks.slack.com/services/T00/B00/XXXX
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ingest_watch:/app/ingest_watch
+
+volumes:
+  pgdata:
+

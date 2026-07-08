@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pulse Guard AI — Observability Watchdog</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root { --bg:#0d1117; --card:#161b22; --border:#30363d; --text:#c9d1d9; --muted:#8b949e; --accent:#58a6ff; --err:#f85149; --ok:#3fb950; --warn:#d29922; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+    header { padding:20px 28px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+    header h1 { font-size:20px; margin:0; }
+    header .dot { width:12px; height:12px; border-radius:50%; background:var(--ok); box-shadow:0 0 8px var(--ok); }
+    .sub { color:var(--muted); font-size:13px; }
+    main { padding:24px 28px; display:grid; gap:20px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; }
+    .card h2 { font-size:14px; margin:0 0 12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+    .kpi { font-size:34px; font-weight:700; }
+    .row { grid-column:1/-1; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    select, button, input { background:#0d1117; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:13px; }
+    button { cursor:pointer; }
+    button.primary { background:var(--accent); color:#0d1117; border:none; font-weight:600; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th,td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); }
+    th { color:var(--muted); font-weight:600; }
+    .badge { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+    .badge.critical { background:rgba(248,81,73,.15); color:var(--err); }
+    .badge.warning { background:rgba(210,153,34,.15); color:var(--warn); }
+    .badge.info { background:rgba(88,166,255,.15); color:var(--accent); }
+    .health-good { color:var(--ok); } .health-bad { color:var(--err); } .health-mid { color:var(--warn); }
+    .empty { color:var(--muted); font-size:13px; padding:12px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="dot" id="statusDot"></span>
+    <div>
+      <h1>Pulse Guard AI</h1>
+      <div class="sub">Intelligent Observability &amp; Event Watchdog · SRE spike detection</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="card row">
+      <h2>Controls</h2>
+      <div class="toolbar">
+        <label class="sub">Service</label>
+        <select id="serviceSelect"></select>
+        <label class="sub">Window (min)</label>
+        <select id="windowSelect">
+          <option value="30">30</option>
+          <option value="60" selected>60</option>
+          <option value="180">180</option>
+          <option value="1440">1440</option>
+        </select>
+        <button class="primary" id="refreshBtn">Refresh</button>
+        <button id="demoBtn">Load Demo Data</button>
+        <button id="enterpriseBtn">Load Enterprise Data</button>
+      </div>
+    </div>
+
+    <div class="card"><h2>Health Score</h2><div class="kpi" id="kpiHealth">—</div></div>
+    <div class="card"><h2>Total Events</h2><div class="kpi" id="kpiTotal">—</div></div>
+    <div class="card"><h2>Errors</h2><div class="kpi" style="color:var(--err)" id="kpiErrors">—</div></div>
+    <div class="card"><h2>Active Anomalies</h2><div class="kpi" style="color:var(--warn)" id="kpiAnomalies">—</div></div>
+
+    <div class="card row">
+      <h2>Continuous Log Poller</h2>
+      <div class="toolbar">
+        <span class="sub">Status</span>
+        <span class="badge" id="schedBadge">unknown</span>
+        <span class="sub" id="schedInfo"></span>
+        <button id="schedStartBtn">Start</button>
+        <button id="schedStopBtn">Stop</button>
+        <button id="schedPollBtn">Poll Now</button>
+      </div>
+    </div>
+
+    <div class="card row">
+      <h2>Health Trend</h2>
+      <canvas id="trendChart" height="90"></canvas>
+    </div>
+
+    <div class="card row">
+      <h2>Detected Anomalies</h2>
+      <table><thead><tr><th>Service</th><th>Bucket</th><th>Errors</th><th>Baseline</th><th>Z-Score</th><th>Severity</th><th>Alert</th></tr></thead>
+      <tbody id="anomalyBody"><tr><td colspan="7" class="empty">No anomalies yet.</td></tr></tbody></table>
+    </div>
+
+    <div class="card row">
+      <h2>Fired Webhook Alerts</h2>
+      <table><thead><tr><th>Service</th><th>Target</th><th>Status</th><th>When</th></tr></thead>
+      <tbody id="alertBody"><tr><td colspan="4" class="empty">No alerts fired.</td></tr></tbody></table>
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
+

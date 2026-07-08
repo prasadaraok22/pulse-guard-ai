@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" font-family="-apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#58a6ff"/>
+    </marker>
+    <style>
+      .bg    { fill:#0d1117; }
+      .card  { fill:#161b22; stroke:#30363d; stroke-width:1.5; rx:12; }
+      .accent{ fill:#1f2a3a; stroke:#58a6ff; stroke-width:1.5; rx:12; }
+      .ai    { fill:#20182b; stroke:#a371f7; stroke-width:1.5; rx:12; }
+      .alert { fill:#2a1a1f; stroke:#f85149; stroke-width:1.5; rx:12; }
+      .ok    { fill:#16241b; stroke:#3fb950; stroke-width:1.5; rx:12; }
+      .title { fill:#c9d1d9; font-size:15px; font-weight:700; }
+      .sub   { fill:#8b949e; font-size:11.5px; }
+      .h     { fill:#c9d1d9; font-size:20px; font-weight:800; }
+      .tag   { fill:#8b949e; font-size:12px; }
+      .flow  { stroke:#58a6ff; stroke-width:2; fill:none; marker-end:url(#arrow); }
+      .flowd { stroke:#58a6ff; stroke-width:2; fill:none; stroke-dasharray:5 4; marker-end:url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="960" height="560"/>
+  <text class="h" x="32" y="44">🛡️ Pulse Guard AI — Architecture</text>
+  <text class="tag" x="32" y="66">Intelligent Observability &amp; Event Watchdog · API-first · SRE spike detection</text>
+
+  <!-- FastAPI boundary -->
+  <rect x="24" y="88" width="912" height="360" rx="14" fill="none" stroke="#30363d" stroke-dasharray="4 5"/>
+  <text class="tag" x="40" y="110">FastAPI application (Uvicorn)</text>
+
+  <!-- Sources -->
+  <rect class="accent" x="40" y="130" width="180" height="150" rx="12"/>
+  <text class="title" x="60" y="158">Log Sources</text>
+  <text class="sub" x="60" y="182">POST /api/ingest/raw</text>
+  <text class="sub" x="60" y="202">POST /api/ingest/events</text>
+  <text class="sub" x="60" y="222">POST /api/ingest/file</text>
+  <text class="sub" x="60" y="250">📁 ingest_watch/*.log</text>
+  <text class="sub" x="60" y="268">(APScheduler poller)</text>
+
+  <!-- Parser -->
+  <rect class="card" x="270" y="150" width="150" height="110" rx="12"/>
+  <text class="title" x="290" y="180">Parser</text>
+  <text class="sub" x="290" y="204">plaintext + JSON</text>
+  <text class="sub" x="290" y="224">level normalize</text>
+  <text class="sub" x="290" y="244">bucket by service</text>
+
+  <!-- DB -->
+  <rect class="card" x="270" y="300" width="150" height="96" rx="12"/>
+  <text class="title" x="290" y="330">Database</text>
+  <text class="sub" x="290" y="354">SQLAlchemy 2.0</text>
+  <text class="sub" x="290" y="374">SQLite / Postgres</text>
+
+  <!-- AI Engine -->
+  <rect class="ai" x="470" y="150" width="200" height="150" rx="12"/>
+  <text class="title" x="492" y="180">Anomaly Engine</text>
+  <text class="sub" x="492" y="206">Rolling-window Z-score</text>
+  <text class="sub" x="492" y="226">EWMA adaptive baseline</text>
+  <text class="sub" x="492" y="246">spike: z ≥ 3 &amp; count ≥ 5</text>
+  <text class="sub" x="492" y="272">severity: warning/critical</text>
+  <text class="sub" x="492" y="290">explainable reason string</text>
+
+  <!-- Decision -->
+  <text class="tag" x="700" y="150">threshold breached?</text>
+
+  <!-- Alerting -->
+  <rect class="alert" x="720" y="130" width="196" height="150" rx="12"/>
+  <text class="title" x="740" y="158">Alerting</text>
+  <text class="sub" x="740" y="182">Slack (Block Kit)</text>
+  <text class="sub" x="740" y="202">Discord (rich embed)</text>
+  <text class="sub" x="740" y="222">generic JSON / local sink</text>
+  <text class="sub" x="740" y="250">auto-detect from URL</text>
+  <text class="sub" x="740" y="268">graceful degradation</text>
+
+  <!-- Dashboard -->
+  <rect class="ok" x="470" y="330" width="446" height="96" rx="12"/>
+  <text class="title" x="492" y="360">Dashboard (Chart.js)</text>
+  <text class="sub" x="492" y="384">health score · error-rate trend · anomalies · fired alerts</text>
+  <text class="sub" x="492" y="404">poller controls · one-click demo / enterprise data · auto-refresh</text>
+
+  <!-- Flows -->
+  <path class="flow" d="M220 205 L268 205"/>            <!-- sources -> parser -->
+  <path class="flow" d="M345 260 L345 298"/>            <!-- parser -> db -->
+  <path class="flow" d="M420 320 C450 320 450 250 468 235"/> <!-- db -> engine -->
+  <path class="flow" d="M420 205 L468 210"/>            <!-- parser -> engine (fast path) -->
+  <path class="flow" d="M670 200 L718 200"/>            <!-- engine -> alerting -->
+  <path class="flow" d="M570 300 L570 328"/>            <!-- engine -> dashboard -->
+  <path class="flowd" d="M818 280 L818 330 L918 330"/>  <!-- alerts -> dashboard log -->
+
+  <!-- Tech strip -->
+  <text class="tag" x="32" y="486">Stack:</text>
+  <text class="sub" x="80" y="486">FastAPI · Uvicorn · SQLAlchemy 2 · SQLite/Postgres · APScheduler · httpx · Chart.js</text>
+  <text class="tag" x="32" y="512">Deploy:</text>
+  <text class="sub" x="88" y="512">Docker + docker-compose (Postgres) · GitHub Actions CI (SQLite + Postgres + image build)</text>
+  <text class="tag" x="32" y="538">Tested:</text>
+  <text class="sub" x="88" y="538">22 pytest cases — parser, detection scenarios, scheduler tailing/rotation, Slack/Discord payloads</text>
+</svg>
+
