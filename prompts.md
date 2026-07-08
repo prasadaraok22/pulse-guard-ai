@@ -299,4 +299,22 @@ service. Run with `uvicorn app.main:app --port 8100` (or any free port).
 
 **Elapsed Time at end of Turn 9:** ~T+5:30
 
+---
+
+## Turn 10 — Submission Wiring (repo URL, badge, Tagle Tag)
+
+**Architect Prompt:**
+> Tagle "Tag" summary missing; verify repo pushed & public; fix CI badge OWNER placeholder. Code pushed to https://github.com/prasadaraok22/pulse-guard-ai.git
+
+**AI Engineer Action:**
+- Fixed the CI badge `OWNER` → **prasadaraok22** and linked it to the Actions
+  page; added a **Repository** link at the top of the README.
+- Added **`docs/tagle-tag.md`** — a fill-in-ready Phase 1 "Tag" summary template
+  (primary tag, profile URL, summary, screenshot slot) referenced in Docs.
+- Added a **Submission Checklist** section to the README (repo, prompts.md,
+  deck, Tagle, "no cloud resources to decommission").
+- Personalized the `LICENSE` copyright to the repo owner.
+
+**Elapsed Time at end of Turn 10:** ~T+5:35
+
 

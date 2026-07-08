@@ -2,7 +2,9 @@
 
 > **AI-powered SRE watchdog that parses logs, detects error spikes, and fires real-time webhook alerts with live health dashboards.**
 
-![CI](https://github.com/OWNER/pulse-guard-ai/actions/workflows/ci.yml/badge.svg)
+📦 **Repository:** https://github.com/prasadaraok22/pulse-guard-ai
+
+[![CI](https://github.com/prasadaraok22/pulse-guard-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/prasadaraok22/pulse-guard-ai/actions/workflows/ci.yml)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Python](https://img.shields.io/badge/python-3.11-blue.svg)
 
@@ -301,7 +303,18 @@ PULSE_DATABASE_URL=postgresql+psycopg2://user:pass@host:5432/dbname uvicorn app.
 - `docs/PulseGuardAI.pdf` — rendered PDF deck. Regenerate with:
   `npx @marp-team/marp-cli docs/presentation.md --pdf -o docs/PulseGuardAI.pdf`
 - `.env.example` — sample environment configuration (copy to `.env`).
+- `docs/tagle-tag.md` — Tagle "Tag" profile summary (Phase 1 deliverable).
 - `info.md` — challenge brief.
+
+## ✅ Submission Checklist
+
+- [x] Python, API-first, free-tier DB (SQLite/Postgres), dashboard
+- [x] Public GitHub repo — https://github.com/prasadaraok22/pulse-guard-ai
+- [x] `prompts.md` full human-in-the-loop audit log
+- [x] AI-generated deck — `docs/presentation.md` + `PulseGuardAI.pptx` / `.pdf`
+- [ ] Tagle "Tag" summary — fill in `docs/tagle-tag.md` + attach screenshot
+- [x] Cloud resources: **none provisioned** (local SQLite / optional local
+  Postgres via Docker) — nothing to decommission
 
 ## 📜 License
 
