@@ -73,7 +73,7 @@ async function loadAnomalies() {
   const anomalies = await api('/api/anomalies?limit=50');
   document.getElementById('kpiAnomalies').textContent = anomalies.length;
   const body = document.getElementById('anomalyBody');
-  if (!anomalies.length) { body.innerHTML = '<tr><td colspan="7" class="empty">No anomalies yet.</td></tr>'; return; }
+  if (!anomalies.length) { body.innerHTML = '<tr><td colspan="8" class="empty">No anomalies yet.</td></tr>'; return; }
   body.innerHTML = anomalies.map(a => `
     <tr>
       <td>${a.service}</td>
@@ -82,8 +82,35 @@ async function loadAnomalies() {
       <td>${a.baseline.toFixed(1)}</td>
       <td>${a.zscore.toFixed(2)}</td>
       <td><span class="badge ${a.severity}">${a.severity}</span></td>
+      <td>${aiInsightCell(a)}</td>
       <td>${a.alert_sent ? '✅' : '—'}</td>
     </tr>`).join('');
+}
+
+function aiInsightCell(a) {
+  if (!a.llm_enriched) return '<span class="sub">—</span>';
+  const tip = [a.llm_root_cause, a.llm_remediation ? ('Fix: ' + a.llm_remediation) : '']
+    .filter(Boolean).join(' | ').replace(/"/g, '&quot;');
+  const label = a.llm_label ? `🤖 ${a.llm_label}` : '🤖';
+  const impact = a.llm_impact ? ` <span class="badge ${a.llm_impact === 'critical' || a.llm_impact === 'high' ? 'critical' : 'info'}">${a.llm_impact}</span>` : '';
+  return `<span title="${tip}">${label}</span>${impact}`;
+}
+
+async function loadLlmStatus() {
+  try {
+    const st = await api('/api/llm/status');
+    const badge = document.getElementById('llmBadge');
+    if (st.enabled && st.configured) {
+      badge.textContent = `AI enrichment: on (${st.model})`;
+      badge.className = 'badge info';
+    } else if (st.enabled && !st.configured) {
+      badge.textContent = 'AI enrichment: no API key';
+      badge.className = 'badge warning';
+    } else {
+      badge.textContent = 'AI enrichment: off';
+      badge.className = 'badge warning';
+    }
+  } catch (e) { /* ignore */ }
 }
 
 async function loadAlerts() {
@@ -118,7 +145,7 @@ async function schedAction(path) {
 async function refreshAll() {
   try {
     await loadServices();
-    await Promise.all([loadTrend(), loadAnomalies(), loadAlerts(), loadScheduler()]);
+    await Promise.all([loadTrend(), loadAnomalies(), loadAlerts(), loadScheduler(), loadLlmStatus()]);
     document.getElementById('statusDot').style.background = '#3fb950';
   } catch (e) {
     document.getElementById('statusDot').style.background = '#f85149';

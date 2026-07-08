@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import Anomaly, AlertLog
+from app import llm
 
 _SEVERITY_COLOR = {          # Discord embed colors
     "critical": 0xE01E5A,
@@ -45,7 +46,7 @@ def detect_webhook_type(url: str) -> str:
 
 def build_payload(anomaly: Anomaly) -> dict:
     """Construct the canonical incident payload (stored + used for generic)."""
-    return {
+    payload = {
         "event": "error_spike_detected",
         "service": anomaly.service,
         "severity": anomaly.severity,
@@ -57,6 +58,14 @@ def build_payload(anomaly: Anomaly) -> dict:
         "fired_at": datetime.now(timezone.utc).isoformat(),
         "source": settings.app_name,
     }
+    if anomaly.llm_enriched:
+        payload["ai_insight"] = {
+            "label": anomaly.llm_label,
+            "root_cause": anomaly.llm_root_cause,
+            "remediation": anomaly.llm_remediation,
+            "impact": anomaly.llm_impact,
+        }
+    return payload
 
 
 def build_slack_message(payload: dict) -> dict:
@@ -76,11 +85,30 @@ def build_slack_message(payload: dict) -> dict:
                 {"type": "mrkdwn", "text": f"*Bucket:*\n{payload['bucket_start']}"},
             ]},
             {"type": "section", "text": {"type": "mrkdwn", "text": f"*Reason:* {payload['reason']}"}},
+            *_slack_ai_blocks(payload),
             {"type": "context", "elements": [
                 {"type": "mrkdwn", "text": f"{payload['source']} · {payload['fired_at']}"}
             ]},
         ],
     }
+
+
+def _slack_ai_blocks(payload: dict) -> list[dict]:
+    ai = payload.get("ai_insight")
+    if not ai:
+        return []
+    bits = []
+    if ai.get("label"):
+        bits.append(f"*AI label:* {ai['label']}")
+    if ai.get("impact"):
+        bits.append(f"*Impact:* {ai['impact']}")
+    if ai.get("root_cause"):
+        bits.append(f"*Root cause:* {ai['root_cause']}")
+    if ai.get("remediation"):
+        bits.append(f"*Remediation:* {ai['remediation']}")
+    if not bits:
+        return []
+    return [{"type": "section", "text": {"type": "mrkdwn", "text": "🤖 " + "\n".join(bits)}}]
 
 
 def build_discord_message(payload: dict) -> dict:
@@ -97,11 +125,28 @@ def build_discord_message(payload: dict) -> dict:
                 {"name": "Baseline", "value": str(payload["baseline"]), "inline": True},
                 {"name": "Z-score", "value": str(payload["zscore"]), "inline": True},
                 {"name": "Bucket", "value": payload["bucket_start"], "inline": False},
+                *_discord_ai_fields(payload),
             ],
             "footer": {"text": f"{payload['source']}"},
             "timestamp": payload["fired_at"],
         }],
     }
+
+
+def _discord_ai_fields(payload: dict) -> list[dict]:
+    ai = payload.get("ai_insight")
+    if not ai:
+        return []
+    fields = []
+    if ai.get("label"):
+        fields.append({"name": "🤖 AI label", "value": ai["label"], "inline": True})
+    if ai.get("impact"):
+        fields.append({"name": "🤖 Impact", "value": ai["impact"], "inline": True})
+    if ai.get("root_cause"):
+        fields.append({"name": "🤖 Root cause", "value": ai["root_cause"], "inline": False})
+    if ai.get("remediation"):
+        fields.append({"name": "🤖 Remediation", "value": ai["remediation"], "inline": False})
+    return fields
 
 
 def format_for_target(payload: dict, webhook_type: str) -> dict:
@@ -115,6 +160,9 @@ def format_for_target(payload: dict, webhook_type: str) -> dict:
 
 def fire_alert(db: Session, anomaly: Anomaly) -> AlertLog:
     """Send (or simulate) a webhook alert for an anomaly and record it."""
+    # Opt-in LLM enrichment (no-op unless PULSE_LLM_ENABLED); fail-safe.
+    llm.maybe_enrich(db, anomaly)
+
     payload = build_payload(anomaly)
     target = settings.webhook_url or "local-sink"
     webhook_type = detect_webhook_type(settings.webhook_url)

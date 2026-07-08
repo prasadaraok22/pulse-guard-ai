@@ -37,23 +37,25 @@ An **API-first**, **AI-driven** service that:
 1. **Ingests** application/platform logs (any format)
 2. **Learns** each service's normal error baseline
 3. **Detects** anomalies / spikes with explainable statistics
-4. **Alerts** via real Slack / Discord webhooks
-5. **Visualizes** health trends on a live dashboard
+4. **Explains** spikes with optional LLM root-cause + remediation
+5. **Alerts** via real Slack / Discord webhooks
+6. **Visualizes** health trends on a live dashboard
 
 ---
 
 ## Architecture
 
 ```
- Logs ─▶ /api/ingest ─▶ Parser ─▶ SQLite ─▶ Anomaly Engine
-   ▲         │                                 (Z-score + EWMA)
-   │         │                                      │
- Watch dir ──┘                          threshold breached?
- (poller)                                          ▼
-                        Slack / Discord webhook ─▶ Dashboard (Chart.js)
+ Logs ─▶ /api/ingest ─▶ Parser ─▶ DB ─▶ Anomaly Engine (Z-score + EWMA)
+   ▲         │              (SQLite/PG)          │
+   │         │                        threshold breached?
+ Watch dir ──┘                                   ▼
+ (poller)                        🤖 LLM enrichment (opt-in, severity-gated, cached)
+                                                 │
+                        Slack / Discord webhook ─┴─▶ Dashboard (Chart.js)
 ```
 
-**API-first · Free DB · Explainable AI · Real alerts**
+**API-first · Free DB · Explainable AI · Optional GenAI · Real alerts**
 
 ---
 
@@ -62,8 +64,9 @@ An **API-first**, **AI-driven** service that:
 | Layer      | Technology            | Why |
 |------------|-----------------------|-----|
 | API        | FastAPI + Uvicorn     | Async, auto OpenAPI docs |
-| Database   | SQLite + SQLAlchemy 2 | Free-tier, zero-config |
+| Database   | SQLite / Postgres     | Free-tier, one-env-var swap |
 | AI Logic   | Rolling Z-score + EWMA| Explainable, dependency-light |
+| GenAI      | Opt-in LLM enrichment | Root-cause, label, triage |
 | Scheduler  | APScheduler           | Continuous log polling |
 | Alerting   | httpx → Slack/Discord | Real incident delivery |
 | Dashboard  | HTML + Chart.js       | Live health trends |
@@ -72,6 +75,8 @@ An **API-first**, **AI-driven** service that:
 
 ## AI Logic — How Detection Works
 
+Two layers: a **deterministic** detector (always on) + **optional GenAI**.
+
 For each service, per 60-second bucket of **error** events:
 
 - **EWMA baseline** adapts to traffic: `ewma = α·count + (1-α)·ewma`
@@ -79,7 +84,8 @@ For each service, per 60-second bucket of **error** events:
 - **Spike** flagged when `count ≥ 5` **and** `z ≥ 3` **and** `count > baseline`
 - **Severity**: `z ≥ 6` → 🔴 critical, `z ≥ 3` → 🟠 warning
 
-> Every alert carries a **human-readable reason** — no black box.
+> The statistical engine is the **sole trigger** — explainable, no black box.
+> The LLM only *annotates* (next slide), so detection stays deterministic.
 
 ---
 
@@ -132,23 +138,50 @@ PULSE_WEBHOOK_URL=https://hooks.slack.com/services/T/B/X \
 
 ---
 
+## 🤖 Optional LLM Enrichment (opt-in)
+
+The statistical engine triggers; the LLM **annotates** — never disrupts the
+deterministic core. Off by default, zero new deps (`httpx`), fail-safe.
+
+- 🧠 **Summarizer** → root-cause hypothesis + remediation
+- 🏷️ **Classifier** → short label (e.g. `DB timeout`)
+- 🚦 **Triage** → business-impact rating (low → critical)
+
+Shown in the dashboard **AI Insight** column + Slack/Discord embeds.
+
+**Cost controls:**
+
+- **Severity gate** — auto-enrich only ≥ `PULSE_LLM_MIN_SEVERITY` (default critical)
+- **Signature cache** — normalize (mask numbers/IPs/UUIDs) + hash → reuse answers
+  for repeated spikes with **zero** API calls
+- Any OpenAI-compatible endpoint (OpenAI, Azure, OpenRouter, local ollama)
+
+```bash
+PULSE_LLM_ENABLED=true PULSE_LLM_API_KEY=sk-... uvicorn app.main:app
+```
+
+---
+
 ## Live Dashboard
 
 - 📊 **Health score** + error-rate trend chart (Chart.js)
-- 🚨 Detected anomalies table (severity, z-score, baseline)
+- 🚨 Detected anomalies table (severity, z-score, baseline, **AI Insight**)
 - 📨 Fired webhook alerts log
 - 🎛️ Poller controls + one-click demo / enterprise data
+- 🤖 AI-enrichment status badge (model + cache hits)
 - 🔄 Auto-refresh every 15s
 
 ---
 
 ## Quality & Testing
 
-- ✅ **22 automated tests** (pytest) — parser, detection, scenarios,
-  scheduler tailing/rotation, Slack/Discord payloads
+- ✅ **33 automated tests** (pytest) — parser, detection, scenarios, scheduler
+  tailing/rotation, Slack/Discord payloads, LLM enrichment (mocked)
 - ✅ True-positive **and** true-negative anomaly coverage
-- ✅ Isolated test DB, deterministic synthetic data
-- ✅ Graceful degradation (webhook failures never crash ingestion)
+- ✅ LLM tests: severity gating, signature caching, fail-safe, default-off
+- ✅ **CI** on push/PR — SQLite + Postgres suites, Docker build, secret-gated
+  real-LLM smoke test
+- ✅ Graceful degradation (webhook/LLM failures never crash ingestion)
 
 ---
 
@@ -163,19 +196,20 @@ PULSE_WEBHOOK_URL=https://hooks.slack.com/services/T/B/X \
 
 ## Roadmap
 
+- ✅ **Shipped:** opt-in LLM enrichment, Docker + Postgres, CI pipeline
+- 🌊 Kafka streaming ingestion (opt-in adapter, partition-by-service scale)
 - 🤖 ML detectors (seasonal Holt-Winters, isolation forest)
 - 🔗 Native cloud log sources (CloudWatch, Azure Monitor)
 - 📈 Per-metric detection (latency, throughput, saturation)
-- 🧵 Incident correlation across cascading services
-- 🐳 Container + Postgres deployment
+- 🧵 LLM incident correlation across cascading services
 
 ---
 
 # 🛡️ Pulse Guard AI
 
-### Detect the spike. Trigger the alert. Protect the pulse.
+### Detect the spike. Explain it. Trigger the alert.
 
 **Thank you.**
 
-*API-first · Explainable AI · Human-in-the-loop*
+*API-first · Explainable AI + Optional GenAI · Human-in-the-loop*
 

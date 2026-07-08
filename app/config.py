@@ -30,6 +30,21 @@ class Settings(BaseSettings):
     poll_glob: str = "*.log"             # filename pattern to tail
     poll_interval_seconds: int = 30      # how often to poll
 
+    # LLM enrichment (OPT-IN — off by default, zero external deps when disabled)
+    llm_enabled: bool = False            # master switch for all LLM features
+    llm_api_key: str = ""                # provider API key (required when enabled)
+    llm_base_url: str = "https://api.openai.com/v1"  # OpenAI-compatible endpoint
+    llm_model: str = "gpt-4o-mini"       # chat-completions model name
+    llm_timeout: float = 20.0            # per-call timeout (seconds)
+    llm_max_messages: int = 12           # top error messages sampled per anomaly
+    llm_summarize: bool = True           # root-cause + remediation summary
+    llm_classify: bool = True            # error label (e.g. "DB timeout")
+    llm_triage: bool = True              # business-impact rating
+    # Cost controls
+    llm_min_severity: str = "critical"   # auto-enrich only >= this (info|warning|critical)
+    llm_cache_enabled: bool = True       # reuse results by error-signature
+    llm_cache_max: int = 512             # max cached signatures (LRU eviction)
+
     # App
     app_name: str = "Pulse Guard AI"
 

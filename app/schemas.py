@@ -53,6 +53,24 @@ class AnomalyOut(BaseModel):
     reason: str
     alert_sent: bool
     created_at: datetime
+    # Optional LLM enrichment (null unless PULSE_LLM_ENABLED)
+    llm_label: Optional[str] = None
+    llm_summary: Optional[str] = None
+    llm_root_cause: Optional[str] = None
+    llm_remediation: Optional[str] = None
+    llm_impact: Optional[str] = None
+    llm_signature: Optional[str] = None
+    llm_enriched: bool = False
+
+
+class LLMStatus(BaseModel):
+    enabled: bool
+    configured: bool
+    model: str
+    base_url: str
+    features: dict[str, bool]
+    min_severity: str
+    cache: dict[str, int]
 
 
 class AlertOut(BaseModel):

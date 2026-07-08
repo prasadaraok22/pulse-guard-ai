@@ -187,4 +187,99 @@ service. Run with `uvicorn app.main:app --port 8100` (or any free port).
 
 **Elapsed Time at end of Turn 5:** ~T+3:50
 
+---
+
+## Turn 6 — Opt-in LLM Enrichment (non-disruptive)
+
+**Architect Prompt:**
+> Add the LLM capabilities without disrupting the deterministic core. Candidates: incident summarizer, log-message classification, severity/triage. Implement as an opt-in module (app/llm.py) gated behind PULSE_LLM_ENABLED + PULSE_LLM_API_KEY, defaulting off so the app runs with zero external deps and all existing tests stay green.
+
+**AI Engineer Action:**
+- **`app/llm.py`** — opt-in enrichment (off by default). Samples the top error
+  messages in a spike's bucket and, in a single OpenAI-compatible
+  `/chat/completions` call (via existing `httpx`, **no new deps**), returns:
+  root-cause + remediation (summarizer), a short label (classifier), and an
+  impact rating (triage). **Fail-safe**: disabled/unconfigured/errored calls
+  silently no-op — ingestion/detection/alerting never break. The statistical
+  engine remains the **sole trigger**; the LLM only annotates.
+- **Config** — `PULSE_LLM_ENABLED`, `PULSE_LLM_API_KEY`, `PULSE_LLM_BASE_URL`,
+  `PULSE_LLM_MODEL`, plus timeout / max-messages / per-feature toggles.
+- **Model + schema** — added nullable `llm_*` columns to `Anomaly` and to
+  `AnomalyOut`; new `LLMStatus` schema.
+- **Alerting** — `fire_alert` enriches before building the payload; Slack Block
+  Kit and Discord embeds now include the AI insight when present.
+- **API** — `GET /api/llm/status`, `POST /api/anomalies/{id}/enrich` (409 when
+  disabled).
+- **Dashboard** — new **AI Insight** column + header **AI enrichment** badge.
+- **Tests** — `tests/test_llm.py` (7 cases): default-off, 409 gate, full-field
+  enrichment via mocked httpx, auto-enrich on ingest, payload/Slack/Discord
+  inclusion, fail-safe on error, malformed-JSON tolerance.
+
+**Verification:**
+- Full suite → **29 passed** (22 existing untouched + 7 new).
+- Live: `/api/llm/status` shows `enabled:false` by default; ingest still detects
+  & alerts; `POST /api/anomalies/1/enrich` → **409** when disabled.
+
+**Elapsed Time at end of Turn 6:** ~T+4:35
+
+---
+
+## Turn 7 — LLM Cost Controls & Secret-Gated CI Smoke Test
+
+**Architect Prompt:**
+> Add support auto-enrich only high-severity spikes (to control token cost), add response caching by error-signature and wire the LLM key as a GitHub Actions secret for an integration smoke test
+
+**AI Engineer Action — all three:**
+
+1. **Severity-gated auto-enrichment**
+   - `PULSE_LLM_MIN_SEVERITY` (default `critical`). Auto path enriches only
+     spikes at/above the threshold; `passes_severity()` / `should_auto_enrich()`
+     helpers. Manual `POST /api/anomalies/{id}/enrich` uses `force=True` to
+     bypass the gate.
+
+2. **Response caching by error-signature**
+   - `signature()` normalizes error messages (masks numbers, IPs, UUIDs, hex)
+     and hashes the sorted templates. In-memory **LRU** cache
+     (`PULSE_LLM_CACHE_ENABLED`, `PULSE_LLM_CACHE_MAX`) reuses prior answers with
+     **zero** API calls for repeated/similar spikes. Hits/misses + size exposed
+     on `GET /api/llm/status`; signature persisted on the anomaly
+     (`llm_signature`). Cache cleared per-test in `conftest.py`.
+
+3. **Secret-gated CI integration smoke test**
+   - New `llm-smoke` CI job (push-only) runs a **real** LLM call using the
+     `OPENAI_API_KEY` repo secret; skips cleanly when absent (forks/no secret).
+   - `tests/test_llm_integration.py` (`@pytest.mark.integration`, module-level
+     skip without key) + `pytest.ini` marker registration.
+
+**Verification:**
+- Full suite → **33 passed, 1 skipped** (integration skips without a key).
+- New unit tests prove: severity gate (auto skips `warning`, manual enriches),
+  signature normalization (`500ms/10.0.0.1` ≡ `1200ms/10.0.0.9`), and cache
+  reuse (two identical-signature spikes ⇒ exactly **1** API call).
+
+**Elapsed Time at end of Turn 7:** ~T+5:10
+
+---
+
+## Turn 8 — Update Architecture & Deck with LLM Integration
+
+**Architect Prompt:**
+> Update architecture and presentation deck with llm integration
+
+**AI Engineer Action:**
+- **`docs/architecture.svg`** — redrawn (960×620) with a dedicated purple
+  **🤖 LLM Enrichment (opt-in, off by default)** stage between the engine and
+  alerting, dashed "opt-in" flows, "+ AI insight when enriched" on alerting, an
+  **AI Insight** note on the dashboard, and refreshed footer (stack incl. LLM,
+  CI incl. secret-gated smoke, 33 tests).
+- **`docs/presentation.md`** — added an **Optional LLM Enrichment** slide
+  (summarizer/classifier/triage + severity gate + signature cache); updated
+  Vision, Architecture, Tech Stack (GenAI row), AI Logic (two-layer framing),
+  Dashboard, Testing (33 tests + CI), Roadmap (shipped items + Kafka), and
+  closing tagline.
+- **Re-rendered** `docs/PulseGuardAI.pptx` (2.9 MB) and `docs/PulseGuardAI.pdf`
+  (531 KB) from the updated Markdown; validated the SVG XML.
+
+**Elapsed Time at end of Turn 8:** ~T+5:25
+
 

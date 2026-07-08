@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db, init_db
 from app.models import LogEvent, Anomaly, AlertLog
-from app import parser, anomaly as anomaly_engine, alerting, schemas, scheduler
+from app import parser, anomaly as anomaly_engine, alerting, schemas, scheduler, llm
 
 
 @asynccontextmanager
@@ -138,6 +138,32 @@ def list_anomalies(
     if service:
         stmt = stmt.where(Anomaly.service == service)
     return list(db.execute(stmt).scalars().all())
+
+
+@app.get("/api/llm/status", response_model=schemas.LLMStatus, tags=["llm"])
+def llm_status():
+    """Report whether opt-in LLM enrichment is enabled and configured."""
+    return llm.status()
+
+
+@app.post("/api/anomalies/{anomaly_id}/enrich", response_model=schemas.AnomalyOut, tags=["llm"])
+def enrich_anomaly(anomaly_id: int, db: Session = Depends(get_db)):
+    """Manually (re)run LLM enrichment for one anomaly.
+
+    Requires PULSE_LLM_ENABLED + a configured API key, else returns 409.
+    """
+    anomaly: Anomaly | None = db.get(Anomaly, anomaly_id)
+    if anomaly is None:
+        raise HTTPException(status_code=404, detail="Anomaly not found.")
+    if not llm.is_enabled():
+        raise HTTPException(
+            status_code=409,
+            detail="LLM enrichment is disabled. Set PULSE_LLM_ENABLED=true and PULSE_LLM_API_KEY.",
+        )
+    anomaly.llm_enriched = False  # allow re-enrichment on demand
+    llm.maybe_enrich(db, anomaly, force=True)  # manual bypasses severity gate
+    db.refresh(anomaly)
+    return anomaly
 
 
 @app.get("/api/alerts", response_model=list[schemas.AlertOut], tags=["query"])

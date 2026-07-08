@@ -21,13 +21,14 @@ import pytest  # noqa: E402
 from app.database import init_db, SessionLocal  # noqa: E402
 from app.models import LogEvent, Anomaly, AlertLog  # noqa: E402
 from app import scheduler  # noqa: E402
+from app import llm  # noqa: E402
 
 init_db()
 
 
 @pytest.fixture(autouse=True)
 def clean_state():
-    """Wipe all tables + poller offsets before each test."""
+    """Wipe all tables + poller offsets + LLM cache before each test."""
     db = SessionLocal()
     try:
         db.query(AlertLog).delete()
@@ -37,5 +38,6 @@ def clean_state():
     finally:
         db.close()
     scheduler._offsets.clear()
+    llm.cache_clear()
     yield
 

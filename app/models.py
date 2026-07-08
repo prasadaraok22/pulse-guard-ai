@@ -44,6 +44,15 @@ class Anomaly(Base):
     alert_sent: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
+    # --- Optional LLM enrichment (populated only when PULSE_LLM_ENABLED) ---
+    llm_label: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    llm_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    llm_root_cause: Mapped[str | None] = mapped_column(Text, nullable=True)
+    llm_remediation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    llm_impact: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    llm_signature: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    llm_enriched: Mapped[bool] = mapped_column(Boolean, default=False)
+
 
 class AlertLog(Base):
     """Record of every (simulated) webhook alert fired."""

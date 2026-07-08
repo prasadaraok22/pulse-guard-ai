@@ -72,3 +72,36 @@ jobs:
       - name: Build image
         run: docker build -t pulse-guard-ai:ci .
 
+  llm-smoke:
+    name: LLM integration smoke (secret-gated)
+    runs-on: ubuntu-latest
+    # Secrets are unavailable to fork PRs; only run on push to this repo.
+    if: ${{ github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Run real-LLM smoke test (skips if no key)
+        env:
+          PULSE_LLM_ENABLED: "true"
+          PULSE_LLM_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PULSE_LLM_MODEL: gpt-4o-mini
+          # OpenAI-compatible base URL override (optional):
+          # PULSE_LLM_BASE_URL: https://api.openai.com/v1
+        run: |
+          if [ -z "$PULSE_LLM_API_KEY" ]; then
+            echo "No OPENAI_API_KEY secret configured — skipping LLM smoke test."
+            exit 0
+          fi
+          pytest -m integration -q tests/test_llm_integration.py
+

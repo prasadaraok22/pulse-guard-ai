@@ -19,6 +19,9 @@ live dashboard.
 - **Smart log parser** — handles plaintext and JSON-per-line formats.
 - **AI anomaly detection** — rolling-window **Z-score** + **EWMA** baseline to
   catch error spikes while adapting to normal traffic.
+- **Optional LLM enrichment** (opt-in, off by default) — annotates each spike
+  with a root-cause hypothesis, remediation, error label, and impact rating;
+  attached to the alert & Slack/Discord message.
 - **Continuous watchdog** — background **APScheduler** tails `*.log` files in a
   watch directory (offset tracking + rotation handling), auto-detecting & alerting.
 - **Real webhook alerting** — auto-detects **Slack** (Block Kit) / **Discord**
@@ -131,6 +134,8 @@ the CLI, the API endpoint, and the scenario tests.
 | POST   | `/api/scheduler/start`| Start continuous log polling                  |
 | POST   | `/api/scheduler/stop` | Stop continuous log polling                   |
 | POST   | `/api/scheduler/poll` | Poll the watch directory once, now            |
+| GET    | `/api/llm/status`     | LLM enrichment status (enabled/configured)    |
+| POST   | `/api/anomalies/{id}/enrich` | Manually run LLM enrichment on an anomaly |
 | GET    | `/api/health`         | Service liveness                              |
 
 ### Example
@@ -171,6 +176,43 @@ echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) ERROR [payment-svc] timeout" >> ingest_watc
 Control it at runtime via the dashboard **Continuous Log Poller** card or the
 `/api/scheduler/*` endpoints.
 
+## 🤖 Optional LLM enrichment (opt-in)
+
+The statistical engine is the **sole trigger** for anomalies — it never calls an
+LLM. When you opt in, detected spikes are additionally *annotated* by an LLM:
+
+- **Summarizer** — root-cause hypothesis + suggested remediation
+- **Classifier** — a short error label (e.g. `DB timeout`, `auth failure`)
+- **Triage** — a business-impact rating (`low`/`medium`/`high`/`critical`)
+
+The insight is stored on the anomaly, shown on the dashboard (**AI Insight**
+column), and embedded in the Slack/Discord alert. It's **off by default**, uses
+the already-present `httpx` (no new dependencies), and is **fail-safe** — any
+error or timeout is swallowed so ingestion/detection/alerting never break.
+
+**Cost controls:**
+
+- **Severity gating** — auto-enrichment only fires for spikes at/above
+  `PULSE_LLM_MIN_SEVERITY` (default `critical`). Lower-severity spikes are
+  skipped automatically; you can still enrich any anomaly manually via the API.
+- **Response caching** — results are cached by **error-signature** (the
+  normalized error-message templates, with numbers/IPs/UUIDs masked). Repeated
+  or similar spikes reuse a prior answer with **no** API call. Cache hits/misses
+  are visible on `GET /api/llm/status`.
+
+```bash
+# Any OpenAI-compatible endpoint (OpenAI, Azure, OpenRouter, local ollama proxy)
+PULSE_LLM_ENABLED=true \
+PULSE_LLM_API_KEY=sk-... \
+PULSE_LLM_MODEL=gpt-4o-mini \
+PULSE_LLM_MIN_SEVERITY=critical \
+  uvicorn app.main:app --port 8100
+
+# Check status (incl. cache stats) / manually enrich a specific anomaly
+curl localhost:8100/api/llm/status
+curl -X POST localhost:8100/api/anomalies/1/enrich
+```
+
 ## ⚙️ Configuration
 
 All settings are env vars with the `PULSE_` prefix (see `app/config.py`):
@@ -189,6 +231,12 @@ All settings are env vars with the `PULSE_` prefix (see `app/config.py`):
 | `PULSE_POLL_DIRECTORY`    | `./ingest_watch`           | Directory of `*.log` to tail     |
 | `PULSE_POLL_GLOB`         | `*.log`                    | Filename pattern to poll         |
 | `PULSE_POLL_INTERVAL_SECONDS` | `30`                   | Poll frequency                   |
+| `PULSE_LLM_ENABLED`       | `false`                    | Opt-in LLM enrichment master switch |
+| `PULSE_LLM_API_KEY`       | `""`                       | LLM provider API key             |
+| `PULSE_LLM_BASE_URL`      | `https://api.openai.com/v1`| OpenAI-compatible endpoint       |
+| `PULSE_LLM_MODEL`         | `gpt-4o-mini`              | Chat-completions model           |
+| `PULSE_LLM_MIN_SEVERITY`  | `critical`                | Auto-enrich only >= this severity |
+| `PULSE_LLM_CACHE_ENABLED` | `true`                     | Cache LLM results by error-signature |
 
 ## 🧪 Tests
 
@@ -234,6 +282,10 @@ PULSE_DATABASE_URL=postgresql+psycopg2://user:pass@host:5432/dbname uvicorn app.
 - **Tests (Postgres)** — same suite against a Postgres service container
   (via `PULSE_TEST_DATABASE_URL`).
 - **Docker build** — validates the image builds.
+- **LLM integration smoke** (secret-gated) — on push, runs a **real** LLM call
+  against the model if an `OPENAI_API_KEY` repo secret is set; otherwise it
+  skips cleanly. Add the secret under *Settings → Secrets and variables →
+  Actions* to enable it.
 
 ## 📄 Project Docs
 
